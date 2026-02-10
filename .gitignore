@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+env/
+venv/
+
+# Dados (Geralmente não comitamos datasets grandes)
+data/
+
+# VS Code
+.vscode/
