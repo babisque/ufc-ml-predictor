@@ -28,11 +28,9 @@ def get_fight_stats(url):
             return None
         
         soup = BeautifulSoup(response.content, 'html.parser')
+        tables = soup.find_all('table') 
 
-        tables = soup.find_all('table', style=False)
-
-        if not tables:
-            return None
+        if not tables: return None
 
         rows = tables[0].find_all('tr', class_='b-fight-details__table-row')
         if len(rows) < 2: return None
@@ -83,12 +81,12 @@ def get_fight_stats(url):
         }
 
     except Exception as e:
-        print(f"Error in {url}: {e}")
+        print(f"Error processing {url}: {e}")
         return None
 
 def main():
     if not os.path.exists(INPUT_FILE):
-        print(f"{INPUT_FILE} not found")
+        print(f"{INPUT_FILE} not found.")
         return
 
     fights_df = pd.read_csv(INPUT_FILE)
@@ -97,15 +95,15 @@ def main():
     if os.path.exists(OUTPUT_FILE):
         existing_data = pd.read_csv(OUTPUT_FILE)
         processed_links = set(existing_data['fight_link'].unique())
-        print(f"Resuming... {len(processed_links)} fights processed")
+        print(f"Resuming... {len(processed_links)} fights already processed.")
     else:
         existing_data = pd.DataFrame()
         processed_links = set()
 
-    print(f"Scrape starting for {total_fights} fight details")
+    print(f"Starting scrape of details for {total_fights} fights...")
 
     new_rows = []
-    save_interval = 50
+    save_interval = 10
 
     for index, row in tqdm(fights_df.iterrows(), total=total_fights):
         link = row['fight_link']
@@ -116,25 +114,25 @@ def main():
         stats = get_fight_stats(link)
 
         if stats:
-            full_record = row.to_dict()
+            full_record = row.to_dict() | stats 
+            
             new_rows.append(full_record)
             processed_links.add(link)
 
         if len(new_rows) >= save_interval:
             chunk_df = pd.DataFrame(new_rows)
+            
             header = not os.path.exists(OUTPUT_FILE)
             chunk_df.to_csv(OUTPUT_FILE, mode='a', header=header, index=False)
-
+            
             new_rows = []
-            time.sleep(0.1)
 
     if new_rows:
         chunk_df = pd.DataFrame(new_rows)
         header = not os.path.exists(OUTPUT_FILE)
         chunk_df.to_csv(OUTPUT_FILE, mode='a', header=header, index=False)
 
-    print("Scrape done")
-
+    print("Scrape completed successfully!")
 
 if __name__ == "__main__":
     main()
