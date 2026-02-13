@@ -5,12 +5,16 @@ import time
 import os
 from tqdm import tqdm
 
+INPUT_EVENTS_FILE = 'data/raw/all_events.csv'
+OUTPUT_FIGHTS_FILE = 'data/raw/all_fights.csv'
+SAVE_INTERVAL = 10 
+
 def get_fight_details(event_url):
     """
-Enters in fight page and scrap every fight
+    Enters in fight page and scrap every fight
     """
     try:
-        response = requests.get(event_url)
+        response = requests.get(event_url, timeout=10)
         if response.status_code != 200:
             return []
 
@@ -27,8 +31,11 @@ Enters in fight page and scrap every fight
             if len(fighters) < 2: continue
 
             winner = fighters[0].text.strip()
-            loser = fighters[1].text.strip()
+            winner_link = fighters[0]['href']
 
+            loser = fighters[1].text.strip()
+            loser_link = fighters[1]['href']
+    
             fight_link = cols[0].find('a')['href'] if cols[0].find('a') else None
             if not fight_link:
                 fight_link = row.get('data-link')
@@ -38,7 +45,9 @@ Enters in fight page and scrap every fight
 
             fights.append({
                 'winner': winner,
+                'winner_link': winner_link,
                 'loser': loser,
+                'loser_link': loser_link,
                 'weight_class': weight_class,
                 'method': method,
                 'fight_link': fight_link
@@ -51,14 +60,35 @@ Enters in fight page and scrap every fight
         return []
 
 def main():
-    events_df = pd.read_csv('data/raw/all_events.csv')
-    # events_df = events_df.head(5)
+    if not os.path.exists(INPUT_EVENTS_FILE):
+        print(f"Event files {INPUT_EVENTS_FILE} not found.")
+        return
 
-    all_fights = []
+    events_df = pd.read_csv(INPUT_EVENTS_FILE)
+    
+    processed_events = set()
+    if os.path.exists(OUTPUT_FIGHTS_FILE):
+        try:
+            existing_fights = pd.read_csv(OUTPUT_FIGHTS_FILE)
+            if 'event_name' in existing_fights.columns:
+                processed_events = set(existing_fights['event_name'].unique())
+                print(f"Resuming... {len(processed_events)} events already processed.")
+        except pd.errors.EmptyDataError:
+            print("Output file exists but is empty. Starting from scratch.")
 
-    print(f"Starting scrape of {len(events_df)} events")
+    events_to_process = events_df[~events_df['name'].isin(processed_events)]
 
-    for index, row in tqdm(events_df.iterrows(), total=len(events_df)):
+    print(f"Starting scrape of {len(events_to_process)} remaining events...")
+
+    if len(events_to_process) == 0:
+        print("All events have already been processed!")
+        return
+
+    os.makedirs('data/raw', exist_ok=True)
+
+    batch_fights = []
+    
+    for i, (index, row) in enumerate(tqdm(events_to_process.iterrows(), total=len(events_to_process))):
         event_url = row['link']
         event_name = row['name']
         event_date = row['date']
@@ -68,15 +98,21 @@ def main():
         for f in fights:
             f['event_name'] = event_name
             f['event_date'] = event_date
-            all_fights.append(f)
+            batch_fights.append(f)
 
         time.sleep(0.1)
 
-    fights_df = pd.DataFrame(all_fights)
-    os.makedirs('data/processed', exist_ok=True)
-    fights_df.to_csv('data/raw/all_fights.csv', index=False)
+        if (i + 1) % SAVE_INTERVAL == 0 or (i + 1) == len(events_to_process):
+            if batch_fights:
+                new_df = pd.DataFrame(batch_fights)
+                
+                header_mode = not os.path.exists(OUTPUT_FIGHTS_FILE)
+                
+                new_df.to_csv(OUTPUT_FIGHTS_FILE, mode='a', header=header_mode, index=False)
+                
+                batch_fights = []
 
-    print(f"{len(fights_df)} fights saved.")
+    print("Scrape completed successfully!")
 
 if __name__ == "__main__":
     main()

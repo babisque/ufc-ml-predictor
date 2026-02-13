@@ -25,9 +25,31 @@ def clean_seconds(value):
             return 0
     return 0
 
+def calculate_total_time(row):
+    """
+    Calculate total fight time in seconds.
+    Formule: (total_rounds - 1) * round_duration + last_round_time
+    """
+
+    try:
+        round_num = int(row['end_round'])
+        time_str = str(row['end_time'])
+        
+        minutes, seconds = map(int, time_str.split(':'))
+        last_round_seconds = minutes * 60 + seconds
+        rounds_completed_seconds = (round_num - 1) * 5 * 60
+        
+        return rounds_completed_seconds + last_round_seconds
+    except:
+        return 0
+
 def clean_data():
     print("Loading dataset...")
     df = pd.read_csv(INPUT_FILE)
+
+    if 'end_round' in df.columns and 'end_time' in df.columns:
+        print("Calculating Total Fight Time...")
+        df['total_time_seconds'] = df.apply(calculate_total_time, axis=1)
 
     print("Converting percentages...")
     pct_cols = ['f1_sig_pct', 'f2_sig_pct', 'f1_td_pct', 'f2_td_pct']
