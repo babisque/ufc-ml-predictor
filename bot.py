@@ -77,6 +77,34 @@ async def predict_fight(ctx, *, args: str):
     except Exception as e:
         await ctx.send(f"An error occurred while processing the prediction: {e}")
 
+async def _send_event_embeds(ctx, status_message, event_name, event_date, fields, from_cache=False):
+    """Sends fight prediction fields across multiple embeds (max 25 fields each)."""
+    FOOTER = "Predictions are based on historical data and machine learning. Not a guarantee of actual fight outcomes!"
+    CHUNK_SIZE = 25
+    chunks = [fields[i:i + CHUNK_SIZE] for i in range(0, len(fields), CHUNK_SIZE)]
+
+    for idx, chunk in enumerate(chunks):
+        cache_note = " (loaded from cache)" if from_cache else ""
+        description = (
+            f"📅 Date: {event_date}\n{len(fields)} fights analyzed{cache_note}."
+            if idx == 0
+            else f"_(continued — part {idx + 1} of {len(chunks)})_"
+        )
+        embed = discord.Embed(
+            title=f"🔮 Predicted Next UFC Event: {event_name} 🔮",
+            description=description,
+            color=discord.Color.gold()
+        )
+        for name, value in chunk:
+            embed.add_field(name=name, value=value, inline=False)
+        if idx == len(chunks) - 1:
+            embed.set_footer(text=FOOTER)
+
+        if idx == 0:
+            await status_message.edit(content=None, embed=embed)
+        else:
+            await ctx.send(embed=embed)
+
 @bot.command(name='nextEvent', help='Predict the outcome of a fight. Usage: !nextEvent')
 async def next_event(ctx):
     status_message = await ctx.send("Fetching the next UFC event...")
@@ -86,7 +114,7 @@ async def next_event(ctx):
     if not event_info:
         await status_message.edit(content="No future events found.")
         return
-    
+
     event_name = event_info['name']
     event_link = event_info['link']
     event_date = event_info['date']
@@ -94,49 +122,35 @@ async def next_event(ctx):
     cached_predictions = get_event_predictions(event_name)
 
     if cached_predictions:
-        await status_message.edit(content=f"Predictions found in database. Loading...")
-
-        embed = discord.Embed(
-            title=f"🔮 Predicted Next UFC Event: {event_name} 🔮",
-            description=f"📅 Date: {event_date}\n{len(cached_predictions)} fights loaded from cache.",
-            color=discord.Color.gold()
-        )
-
-        for fighter_1, fighter_2, weight_class, winner, confiability in cached_predictions:
-            embed.add_field(
-                name=f"{fighter_1} vs {fighter_2} ({weight_class})",
-                value=f"Predicted Winner: **{winner}** with AI Confidence of {confiability:.2%}",
-                inline=False
+        await status_message.edit(content="Predictions found in database. Loading...")
+        fields = [
+            (
+                f"{fighter_1} vs {fighter_2} ({weight_class})",
+                f"Predicted Winner: **{winner}** with AI Confidence of {confiability:.2%}"
             )
-
-        embed.set_footer(text="Predictions are based on historical data and machine learning. Not a guarantee of actual fight outcomes!")
-        await status_message.edit(content=None, embed=embed)
+            for fighter_1, fighter_2, weight_class, winner, confiability in cached_predictions
+        ]
+        await _send_event_embeds(ctx, status_message, event_name, event_date, fields, from_cache=True)
         return
 
-    await status_message.edit(content=f"Fight event found. Fetching details...")
+    await status_message.edit(content="Fight event found. Fetching details...")
 
     fights = get_event_fights(event_link)
 
     if not fights:
         await status_message.edit(content=f"No fight details found for {event_name}.")
         return
-    
-    embed = discord.Embed(
-        title=f"🔮 Predicted Next UFC Event: {event_name} 🔮",
-        description=f"📅 Date: {event_date}\nThe model analyzed {len(fights)} fights.",
-        color=discord.Color.gold()
-    )
 
+    fields = []
     for fighter_1, fighter_2, weight_class in fights:
         f1 = get_fighter_profile(fighter_1, historical_df)
         f2 = get_fighter_profile(fighter_2, historical_df)
 
         if not f1 or not f2:
-            embed.add_field(
-                name=f"{fighter_1} vs {fighter_2} ({weight_class})",
-                value="Could not retrieve profiles for one or both fighters. Skipping prediction.",
-                inline=False
-            )
+            fields.append((
+                f"{fighter_1} vs {fighter_2} ({weight_class})",
+                "Could not retrieve profiles for one or both fighters. Skipping prediction."
+            ))
             continue
 
         X_new = prepare_data_prevision(f1, f2, weight_class)
@@ -150,14 +164,12 @@ async def next_event(ctx):
 
             save_prediction(event_name, fighter_1, fighter_2, weight_class, winner, confiability)
 
-            embed.add_field(
-                name=f"{fighter_1} vs {fighter_2} ({weight_class})",
-                value=f"Predicted Winner: **{winner}** with AI Confidence of {confiability:.2%}",
-                inline=False
-            )
+            fields.append((
+                f"{fighter_1} vs {fighter_2} ({weight_class})",
+                f"Predicted Winner: **{winner}** with AI Confidence of {confiability:.2%}"
+            ))
 
-    embed.set_footer(text="Predictions are based on historical data and machine learning. Not a guarantee of actual fight outcomes!")
-    await status_message.edit(content=None, embed=embed)
+    await _send_event_embeds(ctx, status_message, event_name, event_date, fields)
 
 @bot.command(name='stats', help='Show the official accuracy rate of the Oracle in the real world.')
 async def show_stats(ctx):

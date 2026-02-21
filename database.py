@@ -31,17 +31,24 @@ def init_db():
     print("✅ Database initialized successfully!")
 
 def save_prediction(event_name, fighter_1, fighter_2, weight_class, predicted_winner, confidence):
-    """Saves a new prediction to the database."""
+    """Saves a new prediction to the database, skipping if the fight already exists for the event."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    
+
+    cursor.execute('''
+        SELECT COUNT(*) FROM predictions
+        WHERE event_name = ? AND fighter_1 = ? AND fighter_2 = ?
+    ''', (event_name, fighter_1, fighter_2))
+    if cursor.fetchone()[0] > 0:
+        conn.close()
+        return
+
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
     cursor.execute('''
         INSERT INTO predictions (event_name, fighter_1, fighter_2, weight_class, predicted_winner, confidence, prediction_date)
         VALUES (?, ?, ?, ?, ?, ?, ?)
     ''', (event_name, fighter_1, fighter_2, weight_class, predicted_winner, confidence, now))
-    
+
     conn.commit()
     conn.close()
 
@@ -54,9 +61,13 @@ def get_event_predictions(event_name):
     cursor.execute('''
         SELECT fighter_1, fighter_2, weight_class, predicted_winner, confidence
         FROM predictions
-        WHERE event_name = ?
+        WHERE event_name = ? AND id IN (
+            SELECT MIN(id) FROM predictions
+            WHERE event_name = ?
+            GROUP BY fighter_1, fighter_2
+        )
         ORDER BY id ASC
-    ''', (event_name,))
+    ''', (event_name, event_name))
     rows = cursor.fetchall()
     conn.close()
     return rows
