@@ -5,7 +5,7 @@ import asyncio
 
 from discord.ext import commands
 from dotenv import load_dotenv
-from database import save_prediction, get_statistics
+from database import save_prediction, get_statistics, get_event_predictions
 from discord.ext import tasks
 from predict import get_fighter_profile, prepare_data_prevision, historical_df, model
 from src.scraper.events import get_event_fights, get_next_event
@@ -90,6 +90,28 @@ async def next_event(ctx):
     event_name = event_info['name']
     event_link = event_info['link']
     event_date = event_info['date']
+
+    cached_predictions = get_event_predictions(event_name)
+
+    if cached_predictions:
+        await status_message.edit(content=f"Predictions found in database. Loading...")
+
+        embed = discord.Embed(
+            title=f"🔮 Predicted Next UFC Event: {event_name} 🔮",
+            description=f"📅 Date: {event_date}\n{len(cached_predictions)} fights loaded from cache.",
+            color=discord.Color.gold()
+        )
+
+        for fighter_1, fighter_2, weight_class, winner, confiability in cached_predictions:
+            embed.add_field(
+                name=f"{fighter_1} vs {fighter_2} ({weight_class})",
+                value=f"Predicted Winner: **{winner}** with AI Confidence of {confiability:.2%}",
+                inline=False
+            )
+
+        embed.set_footer(text="Predictions are based on historical data and machine learning. Not a guarantee of actual fight outcomes!")
+        await status_message.edit(content=None, embed=embed)
+        return
 
     await status_message.edit(content=f"Fight event found. Fetching details...")
 

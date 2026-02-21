@@ -45,6 +45,22 @@ def save_prediction(event_name, fighter_1, fighter_2, weight_class, predicted_wi
     conn.commit()
     conn.close()
 
+def get_event_predictions(event_name):
+    """Returns cached predictions for a given event name.
+    Returns a list of tuples: (fighter_1, fighter_2, weight_class, predicted_winner, confidence)
+    or an empty list if none exist."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT fighter_1, fighter_2, weight_class, predicted_winner, confidence
+        FROM predictions
+        WHERE event_name = ?
+        ORDER BY id ASC
+    ''', (event_name,))
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
 def get_statistics():
     """Queries the database and returns the numbers of correct predictions, errors, and pending ones."""
     conn = sqlite3.connect(DB_PATH)
