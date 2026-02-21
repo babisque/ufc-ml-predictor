@@ -2,8 +2,40 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 import os
+import re
 
 EVENTS_URL = "http://ufcstats.com/statistics/events/completed?page=all"
+
+def get_next_event():
+    URL = "http://ufcstats.com/statistics/events/completed"
+    
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
+    
+    response = requests.get(URL, headers=headers)
+    soup = BeautifulSoup(response.content, 'html.parser')
+    next_icon = soup.find('img', src=re.compile(r'next\.png'))
+
+    if next_icon:
+        row = next_icon.find_parent('tr')
+        
+        link_tag = row.find('a', class_='b-link')
+        date_tag = row.find('span', class_='b-statistics__date')
+        
+        event_name = link_tag.text.strip()
+        event_link = link_tag['href']
+        event_date = date_tag.text.strip()
+        
+        print(f"Next event found: {event_name} | Date: {event_date}")
+        return {
+            'name': event_name,
+            'link': event_link,
+            'date': event_date
+        }
+    else:
+        print("No future events found.")
+        return None
 
 def get_all_events():
     """
