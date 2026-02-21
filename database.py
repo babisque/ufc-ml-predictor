@@ -45,5 +45,23 @@ def save_prediction(event_name, fighter_1, fighter_2, weight_class, predicted_wi
     conn.commit()
     conn.close()
 
+def get_statistics():
+    """Queries the database and returns the numbers of correct predictions, errors, and pending ones."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT COUNT(*) FROM predictions WHERE is_correct IS NOT NULL")
+    total_resolved = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*) FROM predictions WHERE is_correct = 1")
+    total_correct = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*) FROM predictions WHERE actual_winner IS NULL AND event_name != 'Individual Fight'")
+    total_pending = cursor.fetchone()[0]
+    
+    conn.close()
+    
+    return total_resolved, total_correct, total_pending
+
 if __name__ == "__main__":
     init_db()
