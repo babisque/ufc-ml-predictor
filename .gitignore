@@ -10,3 +10,5 @@ data/
 
 # VS Code
 .vscode/
+
+.env

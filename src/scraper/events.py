@@ -5,15 +5,13 @@ import os
 import re
 
 EVENTS_URL = "http://ufcstats.com/statistics/events/completed?page=all"
-
-def get_next_event():
-    URL = "http://ufcstats.com/statistics/events/completed"
-    
-    headers = {
+HEADERS = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
     }
-    
-    response = requests.get(URL, headers=headers)
+
+def get_next_event():
+        
+    response = requests.get(EVENTS_URL, headers=HEADERS)
     soup = BeautifulSoup(response.content, 'html.parser')
     next_icon = soup.find('img', src=re.compile(r'next\.png'))
 
@@ -36,6 +34,38 @@ def get_next_event():
     else:
         print("No future events found.")
         return None
+    
+def get_event_fights(event_link):
+    """
+    Find the link of the next event and extract the fights list with fighters names and weight class
+    """
+    try:
+        response = requests.get(event_link, headers=HEADERS)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"Request error: {e}")
+        return None
+    
+    soup = BeautifulSoup(response.content, 'html.parser')
+    fights = []
+
+    fights_rows = soup.select('tbody.b-fight-details__table-body tr')
+
+    for row in fights_rows:
+        names = row.find_all('a', class_='b-link b-link_style_black')
+        if len(names) >= 2:
+            lutador_1 = names[0].text.strip()
+            lutador_2 = names[1].text.strip()
+            
+            columns = row.find_all('td')
+            categoria_suja = columns[6].text.strip() if len(columns) > 6 else "Catch Weight"
+            
+            categoria_limpa = categoria_suja.replace(' Bout', '').replace(' Title', '').strip()
+            
+            fights.append((lutador_1, lutador_2, categoria_limpa))
+            
+    return fights
+
 
 def get_all_events():
     """
@@ -44,12 +74,8 @@ def get_all_events():
     """
     print(f"Downloading event list from: {EVENTS_URL}...")
 
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-    }
-
     try:
-        response = requests.get(EVENTS_URL, headers=headers)
+        response = requests.get(EVENTS_URL, headers=HEADERS)
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
         print(f"Request error: {e}")
