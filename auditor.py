@@ -21,8 +21,12 @@ def get_recent_results():
     for row in rows:
         if not row.find('img', src=lambda s: s and 'next.png' in s):
             tag_link = row.find('a', class_='b-link')
-            completed_event_link = tag_link['href']
-            break
+
+            if tag_link is not None:
+                completed_event_link = tag_link['href']
+                break
+            else:
+                continue
             
     if not completed_event_link:
         return {}

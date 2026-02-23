@@ -5,7 +5,7 @@ import asyncio
 
 from discord.ext import commands
 from dotenv import load_dotenv
-from database import save_prediction, get_statistics, get_event_predictions
+from database import save_prediction, get_statistics, get_event_predictions, get_last_event_predictions
 from discord.ext import tasks
 from predict import get_fighter_profile, prepare_data_prevision, historical_df, model
 from src.scraper.events import get_event_fights, get_next_event
@@ -201,6 +201,46 @@ async def show_stats(ctx):
 
         await ctx.send(embed=embed)
 
+    except Exception as e:
+        await ctx.send(f"❌ Error querying the database: {str(e)}")
+
+@bot.command(name='lastEvent', help='Show the predictions for the last UFC event that took place.')
+async def last_event(ctx):
+    try:
+        event, total, correct, fights = get_last_event_predictions()
+
+        if not event:
+            await ctx.send("No predictions found for the last event.")
+            return
+        
+        accuracy = (correct / total) * 100 if total > 0 else 0
+        errors = total - correct
+
+        color = discord.Color.green() if accuracy >= 50 else discord.Color.red()
+        embed = discord.Embed(
+            title=f"📊 Predictions for the Last UFC Event: {event}",
+            description=f"**{event}**\nThe model achieved **{accuracy:.1f}%** accuracy.",
+            color=color
+        )
+
+        embed.add_field(name="Hits", value=f"✅ **{correct}**", inline=True)
+        embed.add_field(name="Errors", value=f"❌ **{errors}**", inline=True)
+
+        fight_text = ""
+        for f1, f2, predicted, real, correct, confidence in fights:
+            icon = "✅" if correct == 1 else "❌"
+            if correct is None:
+                icon = "⏳"
+                real = "Pending"
+
+            details = f"{icon} **{f1}** vs **{f2}**\nPredicted: **{predicted}** ({confidence:.1%}) | Real: **{real}**\n\n"
+            fight_text += details
+
+        if fight_text:
+            embed.add_field(name="Fight details", value=fight_text[:1024], inline=False)
+
+        await ctx.send(embed=embed)
+    
     except Exception as e:
         await ctx.send(f"❌ Error querying the database: {str(e)}")
 

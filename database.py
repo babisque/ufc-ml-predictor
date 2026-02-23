@@ -90,5 +90,39 @@ def get_statistics():
     
     return total_resolved, total_correct, total_pending
 
+def get_last_event_predictions():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        SELECT event_name 
+        FROM predictions 
+        WHERE is_correct IS NOT NULL AND event_name != 'Luta Individual'
+        ORDER BY id DESC LIMIT 1
+    ''')
+    row = cursor.fetchone()
+
+    if not row:
+        conn.close()
+        return None, 0, 0, []
+    
+    last_event_name = row[0]
+    cursor.execute("SELECT COUNT(*) FROM predictions WHERE event_name = ? AND is_correct IS NOT NULL", (last_event_name,))
+    total_resolved = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM predictions WHERE event_name = ? AND is_correct = 1", (last_event_name,))
+    total_correct = cursor.fetchone()[0]
+
+    cursor.execute('''
+        SELECT fighter_1, fighter_2, predicted_winner, actual_winner, is_correct, confidence 
+        FROM predictions 
+        WHERE event_name = ?
+    ''', (last_event_name,))
+    fights = cursor.fetchall()
+
+    conn.close()
+
+    return last_event_name, total_resolved, total_correct, fights
+
 if __name__ == "__main__":
     init_db()
