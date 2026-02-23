@@ -1,5 +1,6 @@
 import sqlite3
 import requests
+import subprocess
 from bs4 import BeautifulSoup
 
 DB_PATH = "data/ufc_predictions.db"
@@ -86,6 +87,15 @@ def audit_predictions():
     conn.commit()
     conn.close()
     print(f"✅ Audit completed! {updates} predictions updated in the database.")
+    
+    if updates > 0:
+        print("🔄 Re-running the pipeline to update the model with new results...")
+        try:
+            subprocess.Popen(["python", "pipeline.py"])
+            print("🚀 Pipeline triggered successfully.")
+
+        except Exception as e:
+            print(f"❌ Failed to trigger pipeline: {e}")
 
 if __name__ == "__main__":
     audit_predictions()
