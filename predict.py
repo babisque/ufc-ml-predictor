@@ -14,31 +14,46 @@ except FileNotFoundError:
 
 def get_fighter_profile(name, df):
     """Extract the most recent fighter profile from historical fight data."""
-    fights = df[df['f1_name'] == name]
+    try:
+        search_name = name.strip().lower()
 
-    if fights.empty:
-        print(f"Warning: No historical data found for fighter: {name}")
-        return None
-    
-    last_fight = fights.sort_values(by='event_date').iloc[-1]
+        fights = df[df['f1_name'].astype(str).str.strip().str.lower() == search_name]
 
-    profile = {
-        'name': name,
-        'age': last_fight['f1_age'],
-        'height': last_fight['f1_height'],
-        'reach': last_fight['f1_reach'],
-        'ctrl_hist_avg': last_fight.get('f1_ctrl_hist_avg', 0),
-        'sig_pct_hist_avg': last_fight.get('f1_sig_pct_hist_avg', 0),
-        'kd_hist_avg': last_fight.get('f1_kd_hist_avg', 0),
-        'sig_str_landed_hist_avg': last_fight.get('f1_sig_str_landed_hist_avg', 0),
-        'td_landed_hist_avg': last_fight.get('f1_td_landed_hist_avg', 0),
-    }
-    
-    stance_cols = [col for col in df.columns if str(col).startswith('f1_stance_')]
-    for col in stance_cols:
-        profile[col] = last_fight[col]
+        if fights.empty:
+            print(f"Warning: No historical data found for fighter: {name}")
+            return None
         
-    return profile
+        last_fight = fights.sort_values(by='event_date').iloc[-1]
+
+        oficial_name = last_fight['f1_name']
+
+        profile = {
+            'name': oficial_name,
+            'age': last_fight['f1_age'],
+            'height': last_fight['f1_height'],
+            'reach': last_fight['f1_reach'],
+            'ctrl_hist_avg': last_fight.get('f1_ctrl_hist_avg', 0),
+            'sig_pct_hist_avg': last_fight.get('f1_sig_pct_hist_avg', 0),
+            'kd_hist_avg': last_fight.get('f1_kd_hist_avg', 0),
+            'sig_str_landed_hist_avg': last_fight.get('f1_sig_str_landed_hist_avg', 0),
+            'td_landed_hist_avg': last_fight.get('f1_td_landed_hist_avg', 0),
+        }
+        
+        stance_cols = [col for col in df.columns if str(col).startswith('f1_stance_')]
+        for col in stance_cols:
+            profile[col] = last_fight[col]
+            
+        return profile
+    
+    except KeyError as e:
+        print(f"Error: Missing column {e} for fighter: {name}")
+        return None
+    except IndexError:
+        print(f"Error: No valid fight data found for fighter: {name}")
+        return None
+    except Exception as e:
+        print(f"Error retrieving profile for {name}: {e}")
+        return None
 
 def prepare_data_prevision(f1_profile, f2_profile, weight_class):
     """Prepare and align fighter data for model prediction by calculating differences and encoding features."""

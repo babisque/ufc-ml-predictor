@@ -244,6 +244,42 @@ async def last_event(ctx):
     except Exception as e:
         await ctx.send(f"❌ Error querying the database: {str(e)}")
 
+@bot.command(name='profile', help='Show the profile of a fighter. Usage: !profile <Fighter Name>')
+async def fighter_profile(ctx, *, fighter_name: str):
+    """
+    Shows the profile of a specific fighter.
+    """
+    fighter_name = fighter_name.title()
+    profile = get_fighter_profile(fighter_name, historical_df)
+
+    if not profile:
+        await ctx.send(f"Could not find a profile for **{fighter_name}**. Please check the name and try again.")
+        return
+    
+    seconds_ctrl = int(profile.get('ctrl_hist_avg', 0))
+    minutes, seconds = divmod(seconds_ctrl, 60)
+    ctrl_time = f"{minutes}m {seconds}s" if minutes > 0 else f"{seconds}s"
+
+    embed = discord.Embed(
+        title=f"🥋 Fighter Profile: {profile['name']}",
+        description="Statistics based on historical averages from the AI model.",
+        color=discord.Color.dark_blue()
+    )
+
+    embed.add_field(name="Age", value=f"{int(profile['age'])} anos", inline=True)
+    embed.add_field(name="Height", value=f"{profile['height']} cm", inline=True)
+    embed.add_field(name="Reach", value=f"{profile['reach']} cm", inline=True)
+    embed.add_field(name="🎯 Strike Accuracy", value=f"{profile.get('sig_pct_hist_avg', 0):.1%}", inline=True)
+    embed.add_field(name="🥊 Strikes Landed/Fight", value=f"{profile.get('sig_str_landed_hist_avg', 0):.1f}", inline=True)
+    embed.add_field(name="💥 Knockdowns/Fight", value=f"{profile.get('kd_hist_avg', 0):.2f}", inline=True)
+    embed.add_field(name="🤼 Takedowns/Fight", value=f"{profile.get('td_landed_hist_avg', 0):.2f}", inline=True)
+    embed.add_field(name="⏱️ Control Time", value=ctrl_time, inline=True)
+    embed.add_field(name="\u200b", value="\u200b", inline=True) 
+
+    embed.set_footer(text="UFC-AI Data Analytics • Data evolves with every fight")
+    
+    await ctx.send(embed=embed)
+
 @tasks.loop(time=AUDIT_TIME)
 async def weekly_audit():
     if datetime.datetime.today().weekday() == 6:

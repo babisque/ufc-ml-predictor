@@ -51,7 +51,7 @@ def get_recent_results():
 
 def audit_predictions():
     """Checks pending predictions and updates them with actual results."""
-    print("🔍 Starting audit of results...")
+    print("Starting audit of results...")
     
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -60,13 +60,13 @@ def audit_predictions():
     pending = cursor.fetchall()
     
     if not pending:
-        print("✅ No predictions pending audit.")
+        print("No predictions pending audit.")
         conn.close()
         return
 
     actual_results = get_recent_results()
     if not actual_results:
-        print("❌ Could not load results from the last event.")
+        print("Could not load results from the last event.")
         conn.close()
         return
 
@@ -86,16 +86,16 @@ def audit_predictions():
 
     conn.commit()
     conn.close()
-    print(f"✅ Audit completed! {updates} predictions updated in the database.")
+    print(f"Audit completed! {updates} predictions updated in the database.")
     
     if updates > 0:
-        print("🔄 Re-running the pipeline to update the model with new results...")
+        print("Re-running the pipeline to update the model with new results...")
         try:
             subprocess.Popen(["python", "pipeline.py"])
-            print("🚀 Pipeline triggered successfully.")
+            print("Pipeline triggered successfully.")
 
         except Exception as e:
-            print(f"❌ Failed to trigger pipeline: {e}")
+            print(f"Failed to trigger pipeline: {e}")
 
 if __name__ == "__main__":
     audit_predictions()

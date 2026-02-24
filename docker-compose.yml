@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  ufc-bot:
+    build: .
+    container_name: ufc_oracle_bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models

@@ -29,13 +29,15 @@ def create_balanced_dataset():
     df_a = df.copy()
     
     cols_to_drop = [f'f1_{s}' for s in base_stats] + [f'f2_{s}' for s in base_stats]
+    cols_to_drop += ['f1_name', 'f2_name', 'f1_link', 'f2_link']
     cols_to_drop = [c for c in cols_to_drop if c in df_a.columns]
     df_a.drop(columns=cols_to_drop, inplace=True)
 
     map_a = {
-        'winner_name': 'f1_name', 'loser_name': 'f2_name',
+        'winner': 'f1_name', 'loser': 'f2_name',
         'winner_link': 'f1_link', 'loser_link': 'f2_link',
     }
+    
     for stat in base_stats:
         map_a[f'winner_{stat}'] = f'f1_{stat}'
         map_a[f'loser_{stat}'] = f'f2_{stat}'
@@ -51,9 +53,10 @@ def create_balanced_dataset():
     df_b.drop(columns=cols_to_drop, inplace=True)
 
     map_b = {
-        'loser_name': 'f1_name', 'winner_name': 'f2_name',
+        'loser': 'f1_name', 'winner': 'f2_name',
         'loser_link': 'f1_link', 'winner_link': 'f2_link',
     }
+
     for stat in base_stats:
         map_b[f'loser_{stat}'] = f'f1_{stat}'
         map_b[f'winner_{stat}'] = f'f2_{stat}'
