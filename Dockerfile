@@ -7,9 +7,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
+RUN useradd -m -r botuser
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD ["python", "bot.py"]
+RUN mkdir -p data && chown -R botuser:botuser /app
+
+USER botuser
+
+CMD ["python", "-m", "src.bot.main"]

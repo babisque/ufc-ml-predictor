@@ -1,19 +1,20 @@
-import os
-import datetime
 import asyncio
+import datetime
 import discord
 
 from discord.ext import commands, tasks
-from dotenv import load_dotenv
 
-from src.db.connection import (
+from src.core.config import settings
+from src.core.logger import get_logger
+
+from src.db import (
     save_prediction, 
     get_statistics, 
     get_event_predictions, 
     get_last_event_predictions
 )
 
-from src.ml.predict import (
+from src.ml import (
     get_fighter_profile, 
     prepare_data_prevision, 
     historical_df, 
@@ -21,11 +22,11 @@ from src.ml.predict import (
 )
 
 from src.scraper.events import get_event_fights, get_next_event
-
 from scripts.auditor import audit_predictions
 
-load_dotenv()
-TOKEN = os.getenv('DISCORD_TOKEN')
+logger = get_logger(__name__)
+
+TOKEN = settings.DISCORD_TOKEN
 AUDIT_TIME = datetime.time(hour=15, minute=0)
 
 intents = discord.Intents.default()
@@ -34,12 +35,12 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 
 @bot.event
 async def on_ready():
-    print(f'Bot is ready. Logged in as {bot.user}')
-    print('Type !help for a list of commands.')
+    logger.info(f'Bot is ready. Logged in as {bot.user}')
+    logger.info('Type !help for a list of commands.')
 
     if not weekly_audit.is_running():
         weekly_audit.start()
-        print("✅ Weekly audit task started.")
+        logger.info("✅ Weekly audit task started.")
 
 @bot.command(name='predict', help='Predict the outcome of a fight. Usage: !predict <Fighter 1> vs <Fighter 2> in <Weight Class>')
 async def predict_fight(ctx, *, args: str):
@@ -87,6 +88,7 @@ async def predict_fight(ctx, *, args: str):
             await message_status.edit(content="Error preparing data for the model. Please try again later.")
 
     except Exception as e:
+        logger.error(f"Error in predict_fight: {e}")
         await ctx.send(f"An error occurred while processing the prediction: {e}")
 
 async def _send_event_embeds(ctx, status_message, event_name, event_date, fields, from_cache=False):
@@ -214,6 +216,7 @@ async def show_stats(ctx):
         await ctx.send(embed=embed)
 
     except Exception as e:
+        logger.error(f"Error querying database for stats: {e}")
         await ctx.send(f"❌ Error querying the database: {str(e)}")
 
 @bot.command(name='lastEvent', help='Show the predictions for the last UFC event that took place.')
@@ -254,6 +257,7 @@ async def last_event(ctx):
         await ctx.send(embed=embed)
     
     except Exception as e:
+        logger.error(f"Error querying database for lastEvent: {e}")
         await ctx.send(f"❌ Error querying the database: {str(e)}")
 
 @bot.command(name='profile', help='Show the profile of a fighter. Usage: !profile <Fighter Name>')
@@ -295,11 +299,12 @@ async def fighter_profile(ctx, *, fighter_name: str):
 @tasks.loop(time=AUDIT_TIME)
 async def weekly_audit():
     if datetime.datetime.today().weekday() == 6:
-        print("🕒 It's Sunday at 15:00! Starting weekly audit...")
+        logger.info("🕒 It's Sunday at 15:00! Starting weekly audit...")
         await asyncio.to_thread(audit_predictions)
-        print("✅ Audit completed on Sunday at 15:00!")
+        logger.info("✅ Audit completed on Sunday at 15:00!")
 
 if __name__ == "__main__":
     if not TOKEN:
+        logger.error("No DISCORD_TOKEN found. Cannot start the bot.")
         raise ValueError("No DISCORD_TOKEN found in environment variables.")
     bot.run(TOKEN)
