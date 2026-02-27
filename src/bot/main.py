@@ -1,16 +1,28 @@
-import discord
 import os
 import datetime
 import asyncio
+import discord
 
-from discord.ext import commands
+from discord.ext import commands, tasks
 from dotenv import load_dotenv
-from database import save_prediction, get_statistics, get_event_predictions, get_last_event_predictions
-from discord.ext import tasks
-from predict import get_fighter_profile, prepare_data_prevision, historical_df, model
+
+from src.db.connection import (
+    save_prediction, 
+    get_statistics, 
+    get_event_predictions, 
+    get_last_event_predictions
+)
+
+from src.ml.predict import (
+    get_fighter_profile, 
+    prepare_data_prevision, 
+    historical_df, 
+    model
+)
+
 from src.scraper.events import get_event_fights, get_next_event
-from src.scraper.events import get_next_event
-from auditor import audit_predictions
+
+from scripts.auditor import audit_predictions
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
@@ -286,5 +298,8 @@ async def weekly_audit():
         print("🕒 It's Sunday at 15:00! Starting weekly audit...")
         await asyncio.to_thread(audit_predictions)
         print("✅ Audit completed on Sunday at 15:00!")
-        
-bot.run(TOKEN)
+
+if __name__ == "__main__":
+    if not TOKEN:
+        raise ValueError("No DISCORD_TOKEN found in environment variables.")
+    bot.run(TOKEN)
