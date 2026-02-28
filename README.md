@@ -139,7 +139,3 @@ docker run --rm --env-file .env ufc-ml-predictor
 - First full pipeline run may take time due to scraping.
 - Scrapers support resume behavior when output files already exist.
 - Prediction quality depends on historical data freshness and data completeness.
-
-## License
-
-Add your license information here (e.g., MIT).
