@@ -15,14 +15,68 @@ This project:
 
 ## Repository Structure
 
-- `src/scraper/` → data collection scripts
-- `src/processing/` → cleaning/merging/balancing scripts
-- `train.py` → feature engineering + model training
-- `predict.py` → inference helpers and CLI prediction
-- `bot.py` → Discord commands (`predict`, `nextEvent`, `stats`, `lastEvent`, `profile`)
-- `database.py` → SQLite storage for predictions
-- `auditor.py` → updates pending predictions with real results
-- `pipeline.py` → end-to-end MLOps pipeline runner
+```text
+.
+├── .dockerignore
+├── .env
+├── .gitignore
+├── docker-compose.yml
+├── Dockerfile
+├── README.md
+├── requirements.txt
+├── structure.md
+├── data/
+│   ├── raw/
+│   │   ├── all_events.csv
+│   │   ├── all_fights.csv
+│   │   ├── fight_details.csv
+│   │   └── fighter_details.csv
+│   ├── processed/
+│   │   ├── balanced_fights.csv
+│   │   ├── clean_fight_details.csv
+│   │   ├── clean_fighter_details.csv
+│   │   ├── historical_df.csv
+│   │   └── merged_data.csv
+│   └── ufc_predictions.db
+├── models/
+├── notebooks/
+│   └── 01_exploratory_analysis.ipynb
+├── scripts/
+│   ├── auditor.py
+│   └── run_scraper.py
+├── src/
+│   ├── api/
+│   ├── bot/
+│   │   ├── __init__.py
+│   │   └── main.py
+│   ├── core/
+│   │   ├── config.py
+│   │   ├── exceptions.py
+│   │   └── logger.py
+│   ├── db/
+│   │   ├── __init__.py
+│   │   ├── connection.py
+│   │   └── models.py
+│   ├── ml/
+│   │   ├── __init__.py
+│   │   ├── pipeline.py
+│   │   ├── predict.py
+│   │   └── train.py
+│   ├── processing/
+│   │   ├── clean_data.py
+│   │   ├── clean_fighters.py
+│   │   ├── merge_data.py
+│   │   └── shuffle_data.py
+│   └── scraper/
+│       ├── details.py
+│       ├── events.py
+│       ├── fighters.py
+│       └── fights.py
+└── tests/
+  ├── test_bot/
+  ├── test_ml/
+  └── test_scraper/
+```
 
 ## Data Flow
 
@@ -62,7 +116,7 @@ pip install -r requirements.txt
 ### 1) Run full pipeline
 
 ```bash
-python pipeline.py
+python src/ml/pipeline.py
 ```
 
 This executes:
@@ -75,14 +129,14 @@ This executes:
 - `src/processing/clean_fighters.py`
 - `src/processing/merge_data.py`
 - `src/processing/shuffle_data.py`
-- `train.py`
+- `src/ml/train.py`
 
 ### 2) Run a local prediction (CLI)
 
-Edit fighters in `predict.py` or keep defaults, then:
+Edit fighters in `src/ml/predict.py` or keep defaults, then:
 
 ```bash
-python predict.py
+python src/ml/predict.py
 ```
 
 ### 3) Run Discord bot
@@ -96,7 +150,7 @@ DISCORD_TOKEN=your_token_here
 Then run:
 
 ```bash
-python bot.py
+python src/bot/main.py
 ```
 
 ## Bot Commands
@@ -112,11 +166,11 @@ python bot.py
 - DB path: `data/ufc_predictions.db`
 - Initialize manually (optional):
   ```bash
-  python database.py
+  python src/db/models.py
   ```
 - Audit pending predictions (and auto-trigger pipeline on updates):
   ```bash
-  python auditor.py
+  python scripts/auditor.py
   ```
 
 ## Docker
