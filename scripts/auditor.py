@@ -91,7 +91,7 @@ def audit_predictions():
     if updates > 0:
         print("Re-running the pipeline to update the model with new results...")
         try:
-            subprocess.Popen(["python", "pipeline.py"])
+            subprocess.Popen(["python", "-m", "src.ml.pipeline"])
             print("Pipeline triggered successfully.")
 
         except Exception as e:
