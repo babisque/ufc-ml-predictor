@@ -1,195 +1,111 @@
 # UFC ML Predictor
 
-Machine learning + scraping pipeline to predict UFC fight outcomes and serve predictions through a Discord bot.
+A comprehensive Machine Learning pipeline and Discord bot designed to predict UFC fight outcomes. This project automates the entire lifecycle from data scraping and processing to model training and real-time inference.
 
-## Overview
+## 🚀 Features
 
-This project:
+- **Automated Scraping**: Extracts event, fight, and fighter data directly from UFC sources.
+- **Data Engineering**: Robust cleaning and merging pipeline to prepare datasets for training.
+- **ML Engine**: Random Forest model optimized for fight prediction.
+- **Discord Integration**: Interactive bot to query predictions, fighter stats, and event info.
+- **Audit System**: SQLite-backed auditing to track prediction accuracy over time.
+- **Dockerized**: Fully containerized environment for easy deployment.
 
-- Scrapes UFC event, fight, fighter, and fight-detail data
-- Cleans and merges data into training-ready datasets
-- Trains a Random Forest model
-- Saves model artifacts for inference
-- Exposes predictions via CLI and Discord bot
-- Stores predictions/results in SQLite for auditing and stats
-
-## Repository Structure
+## 📁 Repository Structure
 
 ```text
 .
-├── .dockerignore
-├── .env
-├── .gitignore
-├── docker-compose.yml
-├── Dockerfile
-├── README.md
-├── requirements.txt
-├── structure.md
-├── data/
-│   ├── raw/
-│   │   ├── all_events.csv
-│   │   ├── all_fights.csv
-│   │   ├── fight_details.csv
-│   │   └── fighter_details.csv
-│   ├── processed/
-│   │   ├── balanced_fights.csv
-│   │   ├── clean_fight_details.csv
-│   │   ├── clean_fighter_details.csv
-│   │   ├── historical_df.csv
-│   │   └── merged_data.csv
-│   └── ufc_predictions.db
-├── models/
-├── notebooks/
-│   └── 01_exploratory_analysis.ipynb
-├── scripts/
-│   ├── auditor.py
-│   └── run_scraper.py
+├── data/               # Raw and processed datasets (ignored by git)
+├── models/             # Trained model artifacts (.pkl files)
+├── notebooks/          # Exploratory Data Analysis (EDA)
+├── scripts/            # Utility scripts (auditor, scraper runner)
 ├── src/
-│   ├── api/
-│   ├── bot/
-│   │   ├── __init__.py
-│   │   └── main.py
-│   ├── core/
-│   │   ├── config.py
-│   │   ├── exceptions.py
-│   │   └── logger.py
-│   ├── db/
-│   │   ├── __init__.py
-│   │   ├── connection.py
-│   │   └── models.py
-│   ├── ml/
-│   │   ├── __init__.py
-│   │   ├── pipeline.py
-│   │   ├── predict.py
-│   │   └── train.py
-│   ├── processing/
-│   │   ├── clean_data.py
-│   │   ├── clean_fighters.py
-│   │   ├── merge_data.py
-│   │   └── shuffle_data.py
-│   └── scraper/
-│       ├── details.py
-│       ├── events.py
-│       ├── fighters.py
-│       └── fights.py
-└── tests/
-  ├── test_bot/
-  ├── test_ml/
-  └── test_scraper/
+│   ├── bot/            # Discord bot implementation
+│   ├── core/           # Configuration and logging
+│   ├── db/             # Database models and connection logic
+│   ├── ml/             # Training and prediction pipelines
+│   ├── processing/     # Data cleaning and feature engineering
+│   └── scraper/        # Web scraping modules
+├── tests/              # Comprehensive test suite
+├── Dockerfile          # Container definition
+├── docker-compose.yml  # Multi-container orchestration
+└── requirements.txt    # Python dependencies
 ```
 
-## Data Flow
+## 🛠️ Installation
 
-1. **Scraping**
-   - Events → `data/raw/all_events.csv`
-   - Fights → `data/raw/all_fights.csv`
-   - Fighters → `data/raw/fighter_details.csv`
-   - Fight stats/details → `data/raw/fight_details.csv`
+### Prerequisites
 
-2. **Processing**
-   - Clean fights → `data/processed/clean_fight_details.csv`
-   - Clean fighters → `data/processed/clean_fighter_details.csv`
-   - Merge → `data/processed/merged_data.csv`
-   - Balance/shuffle → `data/processed/balanced_fights.csv`
+- Python 3.10+
+- [Optional] Docker & Docker Compose
 
-3. **Training**
-   - Feature engineering output → `data/processed/historical_df.csv`
-   - Model artifacts:
-     - `models/ufc_random_forest.pkl`
-     - `models/ufc_imputer.pkl`
-     - `models/ufc_model_columns.pkl`
+### Setup
 
-## Requirements
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/your-username/ufc-ml-predictor.git
+   cd ufc-ml-predictor
+   ```
 
-- Python 3.10+ (Dockerfile uses Python 3.13 slim)
-- pip
-- Discord bot token (for bot usage)
+2. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-Install dependencies:
+3. **Configure environment**:
+   Create a `.env` file in the root directory:
+   ```env
+   DISCORD_TOKEN=your_discord_bot_token_here
+   ```
 
-```bash
-pip install -r requirements.txt
-```
+## 📖 Usage
 
-## Quick Start
-
-### 1) Run full pipeline
-
+### 1. Run the Full Pipeline
+Scrapes data, processes it, and trains the model:
 ```bash
 python src/ml/pipeline.py
 ```
 
-This executes:
-
-- `src/scraper/events.py`
-- `src/scraper/fights.py`
-- `src/scraper/fighters.py`
-- `src/scraper/details.py`
-- `src/processing/clean_data.py`
-- `src/processing/clean_fighters.py`
-- `src/processing/merge_data.py`
-- `src/processing/shuffle_data.py`
-- `src/ml/train.py`
-
-### 2) Run a local prediction (CLI)
-
-Edit fighters in `src/ml/predict.py` or keep defaults, then:
-
+### 2. Local Prediction (CLI)
+Test predictions for specific fighters:
 ```bash
 python src/ml/predict.py
 ```
 
-### 3) Run Discord bot
-
-Create `.env` with:
-
-```env
-DISCORD_TOKEN=your_token_here
-```
-
-Then run:
-
+### 3. Start the Discord Bot
 ```bash
 python src/bot/main.py
 ```
 
-## Bot Commands
-
-- `!predict <Fighter 1> , <Fighter 2> , <Weight Class>`
-- `!nextEvent`
-- `!stats`
-- `!lastEvent`
-- `!profile <Fighter Name>`
-
-## Database & Auditing
-
-- DB path: `data/ufc_predictions.db`
-- Initialize manually (optional):
-  ```bash
-  python src/db/models.py
-  ```
-- Audit pending predictions (and auto-trigger pipeline on updates):
-  ```bash
-  python scripts/auditor.py
-  ```
-
-## Docker
-
-Build and run:
-
+### 4. Database Auditing
+Monitor and update predictions with actual results:
 ```bash
-docker compose up --build
+python scripts/auditor.py
 ```
 
-Or directly with Dockerfile:
+## 🤖 Bot Commands
+
+- `!predict <Fighter 1> , <Fighter 2> , <Weight Class>`: Predict outcome.
+- `!nextEvent`: Show details for the upcoming UFC event.
+- `!lastEvent`: Summary of the most recent event.
+- `!profile <Fighter Name>`: Get detailed fighter statistics.
+- `!stats`: Global prediction accuracy and bot stats.
+
+## 🐳 Docker Support
+
+To run the entire stack using Docker:
 
 ```bash
-docker build -t ufc-ml-predictor .
-docker run --rm --env-file .env ufc-ml-predictor
+docker-compose up --build
 ```
 
-## Notes
+## 🧪 Testing
 
-- First full pipeline run may take time due to scraping.
-- Scrapers support resume behavior when output files already exist.
-- Prediction quality depends on historical data freshness and data completeness.
+Run the test suite to ensure everything is working correctly:
+```bash
+pytest
+```
+
+## 📝 License
+
+This project is for educational and research purposes. Data usage should comply with UFC's terms of service.
