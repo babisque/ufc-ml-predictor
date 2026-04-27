@@ -31,6 +31,7 @@ def execute_complete_pipeline():
     print("\n--- Phase 3: Preparing Features ---")
     run_script("src/processing/merge_data.py")
     run_script("src/processing/shuffle_data.py")
+    run_script("src/processing/feature_engineering.py")
     
     print("\n--- Phase 4: Training AI Model ---")
     run_script("src/ml/train.py")
