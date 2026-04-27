@@ -1,7 +1,6 @@
 import asyncio
 import datetime
 import discord
-
 from discord.ext import commands, tasks
 
 from src.core.config import settings
@@ -14,15 +13,11 @@ from src.db import (
     get_last_event_predictions
 )
 
-from src.ml import (
-    get_fighter_profile, 
-    prepare_data_prevision, 
-    historical_df, 
-    model
-)
+from src.ml.predict import predict_winner, get_fighter_profile
 
 from src.scraper.events import get_event_fights, get_next_event
 from scripts.auditor import audit_predictions
+import pandas as pd
 
 logger = get_logger(__name__)
 
@@ -42,7 +37,7 @@ async def on_ready():
         weekly_audit.start()
         logger.info("✅ Weekly audit task started.")
 
-@bot.command(name='predict', help='Predict the outcome of a fight. Usage: !predict <Fighter 1> vs <Fighter 2> in <Weight Class>')
+@bot.command(name='predict', help='Predict the outcome of a fight. Usage: !predict <Fighter 1> , <Fighter 2> , <Weight Class>')
 async def predict_fight(ctx, *, args: str):
     """
     Example usage: !predict Conor McGregor , Dustin Poirier , Lightweight
@@ -56,21 +51,11 @@ async def predict_fight(ctx, *, args: str):
         fighter_1, fighter_2, weight_class = parts
         message_status = await ctx.send(f"Preparing prediction for: {fighter_1} vs {fighter_2} in {weight_class} category...")
 
-        f1 = get_fighter_profile(fighter_1, historical_df)
-        f2 = get_fighter_profile(fighter_2, historical_df)
+        result = predict_winner(fighter_1, fighter_2, weight_class)
 
-        if not f1 or not f2:
-            await message_status.edit(content="Could not find profiles for one or both fighters. Please check the names and try again.")
-            return
-        
-        X_new = prepare_data_prevision(f1, f2, weight_class)
-
-        if X_new is not None:
-            prediction = model.predict(X_new)
-            probability = model.predict_proba(X_new)
-
-            winner = fighter_1 if prediction[0] == 1 else fighter_2
-            prop = float(probability[0][1] if prediction[0] == 1 else probability[0][0])
+        if result:
+            winner = result['winner']
+            prop = result['confidence'] / 100.0
 
             save_prediction("Individual fight", fighter_1, fighter_2, weight_class, winner, prop)
 
@@ -85,7 +70,7 @@ async def predict_fight(ctx, *, args: str):
 
             await message_status.edit(content=None, embed=embed)
         else:
-            await message_status.edit(content="Error preparing data for the model. Please try again later.")
+            await message_status.edit(content="Could not calculate prediction. Check if fighters exist in database.")
 
     except Exception as e:
         logger.error(f"Error in predict_fight: {e}")
@@ -157,30 +142,23 @@ async def next_event(ctx):
 
     fields = []
     for fighter_1, fighter_2, weight_class in fights:
-        f1 = get_fighter_profile(fighter_1, historical_df)
-        f2 = get_fighter_profile(fighter_2, historical_df)
+        
+        result = predict_winner(fighter_1, fighter_2, weight_class)
 
-        if not f1 or not f2:
-            fields.append((
-                f"{fighter_1} vs {fighter_2} ({weight_class})",
-                "Could not retrieve profiles for one or both fighters. Skipping prediction."
-            ))
-            continue
-
-        X_new = prepare_data_prevision(f1, f2, weight_class)
-
-        if X_new is not None:
-            prediction = model.predict(X_new)
-            probability = model.predict_proba(X_new)
-
-            winner = fighter_1 if prediction[0] == 1 else fighter_2
-            confiability = probability[0][1] if prediction[0] == 1 else probability[0][0]
+        if result:
+            winner = result['winner']
+            confiability = result['confidence'] / 100.0
 
             save_prediction(event_name, fighter_1, fighter_2, weight_class, winner, confiability)
 
             fields.append((
                 f"{fighter_1} vs {fighter_2} ({weight_class})",
                 f"Predicted Winner: **{winner}** with AI Confidence of {confiability:.2%}"
+            ))
+        else:
+            fields.append((
+                f"{fighter_1} vs {fighter_2} ({weight_class})",
+                "Could not retrieve profiles for one or both fighters. Skipping prediction."
             ))
 
     await _send_event_embeds(ctx, status_message, event_name, event_date, fields)
@@ -265,36 +243,32 @@ async def fighter_profile(ctx, *, fighter_name: str):
     """
     Shows the profile of a specific fighter.
     """
-    fighter_name = fighter_name.title()
-    profile = get_fighter_profile(fighter_name, historical_df)
+    try:
+        historical_df = pd.read_csv('data/processed/balanced_fights.csv')
+        fighter_name = fighter_name.title()
+        profile = get_fighter_profile(fighter_name, historical_df)
 
-    if not profile:
-        await ctx.send(f"Could not find a profile for **{fighter_name}**. Please check the name and try again.")
-        return
-    
-    seconds_ctrl = int(profile.get('ctrl_hist_avg', 0))
-    minutes, seconds = divmod(seconds_ctrl, 60)
-    ctrl_time = f"{minutes}m {seconds}s" if minutes > 0 else f"{seconds}s"
+        if not profile:
+            await ctx.send(f"Could not find a profile for **{fighter_name}**. Please check the name and try again.")
+            return
+        
+        embed = discord.Embed(
+            title=f"🥋 Fighter Profile: {profile['name']}",
+            description="Statistics based on historical data.",
+            color=discord.Color.dark_blue()
+        )
 
-    embed = discord.Embed(
-        title=f"🥋 Fighter Profile: {profile['name']}",
-        description="Statistics based on historical averages from the AI model.",
-        color=discord.Color.dark_blue()
-    )
-
-    embed.add_field(name="Age", value=f"{int(profile['age'])} anos", inline=True)
-    embed.add_field(name="Height", value=f"{profile['height']} cm", inline=True)
-    embed.add_field(name="Reach", value=f"{profile['reach']} cm", inline=True)
-    embed.add_field(name="🎯 Strike Accuracy", value=f"{profile.get('sig_pct_hist_avg', 0):.1%}", inline=True)
-    embed.add_field(name="🥊 Strikes Landed/Fight", value=f"{profile.get('sig_str_landed_hist_avg', 0):.1f}", inline=True)
-    embed.add_field(name="💥 Knockdowns/Fight", value=f"{profile.get('kd_hist_avg', 0):.2f}", inline=True)
-    embed.add_field(name="🤼 Takedowns/Fight", value=f"{profile.get('td_landed_hist_avg', 0):.2f}", inline=True)
-    embed.add_field(name="⏱️ Control Time", value=ctrl_time, inline=True)
-    embed.add_field(name="\u200b", value="\u200b", inline=True) 
-
-    embed.set_footer(text="UFC-AI Data Analytics • Data evolves with every fight")
-    
-    await ctx.send(embed=embed)
+        embed.add_field(name="Age", value=f"{int(profile['age'])} anos", inline=True)
+        embed.add_field(name="Height", value=f"{profile['height']} cm", inline=True)
+        embed.add_field(name="Reach", value=f"{profile['reach']} cm", inline=True)
+        embed.add_field(name="Win Streak", value=f"{int(profile['f1_win_streak'])}", inline=True)
+        embed.add_field(name="Strike Advantage", value=f"{profile.get('f1_strike_diff', 0):.2f}", inline=True)
+        
+        embed.set_footer(text="UFC-AI Data Analytics • Data evolves with every fight")
+        
+        await ctx.send(embed=embed)
+    except Exception as e:
+         await ctx.send(f"Error loading profile: {e}")
 
 @tasks.loop(time=AUDIT_TIME)
 async def weekly_audit():
