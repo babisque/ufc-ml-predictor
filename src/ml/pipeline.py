@@ -33,7 +33,7 @@ def execute_complete_pipeline():
     run_script("src/processing/shuffle_data.py")
     
     print("\n--- Phase 4: Training AI Model ---")
-    run_script("train.py")
+    run_script("src/ml/train.py")
     
     print("\nPipeline completed successfully. The Oracles' brain is updated! 🧠")
 
