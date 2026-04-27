@@ -48,6 +48,24 @@ def create_differentials(input_path: str, output_path: str):
         
         logging.info("Inativty differentials created successfully.")
 
+        cols_lower = {c.lower(): c for c in df.columns}
+    
+    f1_slpm_col = cols_lower.get('f1_slpm')
+    f1_sapm_col = cols_lower.get('f1_sapm')
+    f2_slpm_col = cols_lower.get('f2_slpm')
+    f2_sapm_col = cols_lower.get('f2_sapm')
+
+    if all([f1_slpm_col, f1_sapm_col, f2_slpm_col, f2_sapm_col]):
+        logging.info("Calculating striking differentials (SLpM and SApM).")
+        
+        df['f1_strike_diff'] = df[f1_slpm_col] - df[f1_sapm_col]
+        df['f2_strike_diff'] = df[f2_slpm_col] - df[f2_sapm_col]
+        
+        df['strike_diff_advantage'] = df['f1_strike_diff'] - df['f2_strike_diff']
+        logging.info("Strike Differential Advantage created successfully.")
+    else:
+        logging.warning("Columns SLpM and SApM not found. Please check the column names for striking stats in your merge_data.py.")
+
     df.to_csv(output_path, index=False)
     logging.info(f"Enriched dataset saved to: {output_path}")
 
