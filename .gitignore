@@ -1,14 +1,71 @@
-# Python
+# Modelos de Machine Learning
+models/*.pkl
+models/*.joblib
+models/*.h5
+
+# Bases de Dados e Dados Brutos/Processados
+*.db
+*.sqlite3
+data/raw/*.csv
+data/processed/*.csv
+
+# Garantir que o Git mantém as pastas vazias enviando um ficheiro vazio
+# (Crie um ficheiro vazio chamado .gitkeep dentro destas pastas para elas subirem para o github)
+!models/.gitkeep
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Ficheiros de ambiente e cache do Python
+.env
 __pycache__/
+*.pyc
 *.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+
+# Environments
 .venv/
 env/
 venv/
+ENV/
+pip-log.txt
+pip-delete-this-directory.txt
 
-# Dados (Geralmente não comitamos datasets grandes)
-data/
+# Jupyter Notebook
+.ipynb_checkpoints
 
-# VS Code
+# IDEs
 .vscode/
+.idea/
 
-.env
+# OS specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
