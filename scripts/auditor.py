@@ -1,7 +1,13 @@
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import sqlite3
-import requests
 import subprocess
 from bs4 import BeautifulSoup
+
+from src.scraper import browser
 
 DB_PATH = "data/ufc_predictions.db"
 
@@ -12,12 +18,12 @@ def get_recent_results():
     """
     url_base = "http://ufcstats.com/statistics/events/completed"
     headers = {'User-Agent': 'Mozilla/5.0'}
-    
-    resp = requests.get(url_base, headers=headers)
+
+    resp = browser.request_get(url_base, headers=headers)
     soup = BeautifulSoup(resp.content, 'html.parser')
-    
+
     rows = soup.select('tr.b-statistics__table-row')[1:]
-    
+
     completed_event_link = None
     for row in rows:
         if not row.find('img', src=lambda s: s and 'next.png' in s):
@@ -28,11 +34,11 @@ def get_recent_results():
                 break
             else:
                 continue
-            
+
     if not completed_event_link:
         return {}
 
-    resp_event = requests.get(completed_event_link, headers=headers)
+    resp_event = browser.request_get(completed_event_link, headers=headers)
     soup_event = BeautifulSoup(resp_event.content, 'html.parser')
     
     results = {}

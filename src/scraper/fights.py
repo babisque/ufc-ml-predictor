@@ -1,9 +1,14 @@
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
 import pandas as pd
-import requests
 from bs4 import BeautifulSoup
 import time
-import os
 from tqdm import tqdm
+
+from src.scraper import browser
 
 INPUT_EVENTS_FILE = 'data/raw/all_events.csv'
 OUTPUT_FIGHTS_FILE = 'data/raw/all_fights.csv'
@@ -14,7 +19,7 @@ def get_fight_details(event_url):
     Enters in fight page and scrap every fight
     """
     try:
-        response = requests.get(event_url, timeout=10)
+        response = browser.request_get(event_url, timeout=10)
         if response.status_code != 200:
             return []
 

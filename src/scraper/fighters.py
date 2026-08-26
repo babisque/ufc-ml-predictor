@@ -1,9 +1,14 @@
-import pandas as pd
-import requests
-from bs4 import BeautifulSoup
 import os
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
+import pandas as pd
+from bs4 import BeautifulSoup
 from tqdm import tqdm
 import time
+
+from src.scraper import browser
 
 INPUT_FILE = 'data/raw/all_fights.csv'
 OUTPUT_FILE = 'data/raw/fighter_details.csv'
@@ -14,7 +19,7 @@ def clean_text(text):
 
 def get_fighter_details(fighter_url):
     try:
-        response = requests.get(fighter_url, timeout=10)
+        response = browser.request_get(fighter_url, timeout=10)
         if response.status_code != 200:
             return None
 

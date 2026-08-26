@@ -1,9 +1,14 @@
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
 import pandas as pd
-import requests
 from bs4 import BeautifulSoup
 import time
-import os
 from tqdm import tqdm
+
+from src.scraper import browser
 
 INPUT_FILE = 'data/raw/all_fights.csv'
 OUTPUT_FILE = 'data/raw/fight_details.csv'
@@ -61,7 +66,7 @@ def extract_values(td):
 
 def get_fight_stats(url):
     try:
-        response = requests.get(url, timeout=10)
+        response = browser.request_get(url, timeout=10)
         if response.status_code != 200:
             return None
         

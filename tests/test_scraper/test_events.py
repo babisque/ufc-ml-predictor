@@ -26,7 +26,7 @@ def test_get_next_event(monkeypatch):
     </table>
     """
 
-    monkeypatch.setattr(events.requests, "get", lambda *args, **kwargs: DummyResponse(html))
+    monkeypatch.setattr(events.browser, "request_get", lambda *args, **kwargs: DummyResponse(html))
     result = events.get_next_event()
     assert result["name"] == "UFC Future"
     assert result["link"] == "http://event-link"
@@ -44,7 +44,7 @@ def test_get_event_fights(monkeypatch):
       </tr>
     </tbody>
     """
-    monkeypatch.setattr(events.requests, "get", lambda *args, **kwargs: DummyResponse(html))
+    monkeypatch.setattr(events.browser, "request_get", lambda *args, **kwargs: DummyResponse(html))
     fights = events.get_event_fights("http://event-link")
     assert fights == [("Fighter A", "Fighter B", "Lightweight")]
 
@@ -62,7 +62,7 @@ def test_get_all_events(monkeypatch):
       </tr>
     </table>
     """
-    monkeypatch.setattr(events.requests, "get", lambda *args, **kwargs: DummyResponse(html))
+    monkeypatch.setattr(events.browser, "request_get", lambda *args, **kwargs: DummyResponse(html))
     df = events.get_all_events()
     assert isinstance(df, pd.DataFrame)
     assert len(df) == 1

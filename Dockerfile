@@ -9,12 +9,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN useradd -m -r botuser
 
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+RUN playwright install --with-deps chromium
 
 COPY . .
 
-RUN mkdir -p data && chown -R botuser:botuser /app
+RUN mkdir -p data && chown -R botuser:botuser /app /ms-playwright
 
 USER botuser
 

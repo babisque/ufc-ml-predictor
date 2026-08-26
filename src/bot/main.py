@@ -108,7 +108,7 @@ async def _send_event_embeds(ctx, status_message, event_name, event_date, fields
 async def next_event(ctx):
     status_message = await ctx.send("Fetching the next UFC event...")
 
-    event_info = get_next_event()
+    event_info = await asyncio.to_thread(get_next_event)
 
     if not event_info:
         await status_message.edit(content="No future events found.")
@@ -134,7 +134,7 @@ async def next_event(ctx):
 
     await status_message.edit(content="Fight event found. Fetching details...")
 
-    fights = get_event_fights(event_link)
+    fights = await asyncio.to_thread(get_event_fights, event_link)
 
     if not fights:
         await status_message.edit(content=f"No fight details found for {event_name}.")

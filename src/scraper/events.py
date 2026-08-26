@@ -1,8 +1,14 @@
+import os
+import re
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
-import os
-import re
+
+from src.scraper import browser
 
 EVENTS_URL = "http://ufcstats.com/statistics/events/completed?page=all"
 HEADERS = {
@@ -10,8 +16,8 @@ HEADERS = {
     }
 
 def get_next_event():
-        
-    response = requests.get(EVENTS_URL, headers=HEADERS)
+
+    response = browser.request_get(EVENTS_URL, headers=HEADERS)
     soup = BeautifulSoup(response.content, 'html.parser')
     next_icon = soup.find('img', src=re.compile(r'next\.png'))
 
@@ -40,7 +46,7 @@ def get_event_fights(event_link):
     Find the link of the next event and extract the fights list with fighters names and weight class
     """
     try:
-        response = requests.get(event_link, headers=HEADERS)
+        response = browser.request_get(event_link, headers=HEADERS)
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
         print(f"Request error: {e}")
@@ -75,7 +81,7 @@ def get_all_events():
     print(f"Downloading event list from: {EVENTS_URL}...")
 
     try:
-        response = requests.get(EVENTS_URL, headers=HEADERS)
+        response = browser.request_get(EVENTS_URL, headers=HEADERS)
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
         print(f"Request error: {e}")
