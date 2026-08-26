@@ -26,7 +26,7 @@ def clean_text_nuclear(text):
 def clean_seconds(value):
     """Convert '4:31' to 271 seconds"""
     if pd.isna(value) or str(value).strip() in ['--', '---']:
-        return 0
+        return np.nan
     try:
         val_str = str(value).strip()
         if ':' in val_str:
@@ -34,18 +34,18 @@ def clean_seconds(value):
             return int(parts[0]) * 60 + int(parts[1])
         return int(float(val_str))
     except:
-        return 0
+        return np.nan
 
 def split_stats(val):
     """Split '31 of 55' into (31, 55)"""
     val_str = str(val).strip()
     if pd.isna(val) or val_str in ['---', '--'] or 'of' not in val_str:
-        return 0, 0
+        return np.nan, np.nan
     try:
         landed, attempted = val_str.split(' of ')
         return int(landed), int(attempted)
     except:
-        return 0, 0
+        return np.nan, np.nan
 
 def clean_percentage(val):
     """Convert '55%' to 0.55"""
@@ -54,8 +54,23 @@ def clean_percentage(val):
         try:
             return float(val_str.replace('%', '')) / 100.0
         except:
-            return 0.0
-    return 0.0
+            return np.nan
+    return np.nan
+
+def filter_invalid_outcomes(df):
+    """Drop fights whose 'method' means there is no genuine winner/loser (no contest, overturned decision).
+    DQ is kept since it has a genuine winner/loser."""
+    if 'method' not in df.columns:
+        return df
+
+    method_upper = df['method'].astype(str).str.upper()
+    invalid_mask = (method_upper == 'CNC') | method_upper.str.contains('OVERTURN')
+
+    dropped = int(invalid_mask.sum())
+    if dropped:
+        print(f"Dropping {dropped} rows with no genuine outcome (CNC/Overturned).")
+
+    return df[~invalid_mask].reset_index(drop=True)
 
 def clean_data():
     if not os.path.exists(INPUT_FILE):
@@ -72,6 +87,9 @@ def clean_data():
     
     for col in str_cols:
         df[col] = df[col].apply(clean_text_nuclear)
+
+    print("Filtering fights with no genuine outcome (CNC/Overturned)...")
+    df = filter_invalid_outcomes(df)
 
     print("Converting percentages...")
     pct_cols = ['f1_sig_pct', 'f2_sig_pct', 'f1_td_pct', 'f2_td_pct']

@@ -21,8 +21,10 @@ def test_execute_complete_pipeline_runs_expected_scripts_in_order(monkeypatch):
         "src/processing/clean_data.py",
         "src/processing/clean_fighters.py",
         "src/processing/merge_data.py",
+        "src/processing/feature_engineering.py",
         "src/processing/shuffle_data.py",
-        "train.py",
+        "src/processing/pairwise_features.py",
+        "src/ml/train.py",
     ]
 
 

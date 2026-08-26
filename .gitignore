@@ -2,6 +2,7 @@
 models/*.pkl
 models/*.joblib
 models/*.h5
+models/*.json
 
 # Bases de Dados e Dados Brutos/Processados
 *.db

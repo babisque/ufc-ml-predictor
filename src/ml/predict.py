@@ -20,16 +20,8 @@ def get_fighter_profile(name, df):
         last_fight = fights.sort_values(by='event_date').iloc[-1]
 
         is_f1 = str(last_fight['f1_name']).strip().lower() == search_name
-        
-        my_prefix = 'f1_' if is_f1 else 'f2_'
-        opp_prefix = 'f2_' if is_f1 else 'f1_'
 
-        time_minutes = last_fight['total_time_seconds'] / 60
-        if time_minutes == 0: time_minutes = 1
-        
-        my_slpm = last_fight[f'{my_prefix}sig_str_landed'] / time_minutes
-        opp_slpm = last_fight[f'{opp_prefix}sig_str_landed'] / time_minutes
-        strike_adv = my_slpm - opp_slpm
+        my_prefix = 'f1_' if is_f1 else 'f2_'
 
         profile = {
             'name': last_fight[f'{my_prefix}name'],
@@ -39,7 +31,6 @@ def get_fighter_profile(name, df):
             'f1_days_since_last': last_fight.get(f'{my_prefix}days_since_last', 180),
             'f1_win_streak': last_fight.get(f'{my_prefix}win_streak', 0),
             'f1_loss_streak': last_fight.get(f'{my_prefix}loss_streak', 0),
-            'f1_strike_diff': strike_adv,
         }
         
         for col in df.columns:
@@ -64,7 +55,13 @@ def prepare_data_prevision(f1_profile, f2_profile, weight_class, training_column
         'ring_rust_diff': f1_profile['f1_days_since_last'] - f2_profile['f1_days_since_last'],
         'win_streak_diff': f1_profile['f1_win_streak'] - f2_profile['f1_win_streak'],
         'loss_streak_diff': f1_profile['f1_loss_streak'] - f2_profile['f1_loss_streak'],
-        'strike_diff_advantage': f1_profile['f1_strike_diff'] - f2_profile['f1_strike_diff']
+        'strike_diff_advantage': f1_profile['f1_strike_diff'] - f2_profile['f1_strike_diff'],
+        'elo_diff': f1_profile['f1_elo'] - f2_profile['f1_elo'],
+        'ko_rate_diff': f1_profile['f1_ko_rate'] - f2_profile['f1_ko_rate'],
+        'sub_rate_diff': f1_profile['f1_sub_rate'] - f2_profile['f1_sub_rate'],
+        'dec_rate_diff': f1_profile['f1_dec_rate'] - f2_profile['f1_dec_rate'],
+        'avg_fight_time_diff': f1_profile['f1_avg_fight_time'] - f2_profile['f1_avg_fight_time'],
+        'num_prior_fights_diff': f1_profile['f1_num_prior_fights'] - f2_profile['f1_num_prior_fights'],
     }
     
     weight_col = f'weight_class_{weight_class}'
